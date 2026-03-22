@@ -1,23 +1,25 @@
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Textarea } from "../../../components"
-import { useDialogStore } from "../../../shared/model/useDialogStore"
 import { useCommentStore } from "../../../entities/comment/model/useCommentStore"
-import { updateCommentToApi } from "../../../entities/comment/api/commentApi"
+import { usePostStore } from "../../../entities/post/model/usePostStore"
+import { useDialogStore } from "../../../shared/model/useDialogStore"
+import { useUpdateCommentMutation } from "../../../entities/comment/api/queries"
+import { Comment } from "../../../entities/comment/model/types"
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Textarea } from '../../../shared/ui'
 
 export const EditCommentDialog = () => {
   const { showEditCommentDialog, setShowEditCommentDialog } = useDialogStore()
-  const { selectedComment, setSelectedComment, setComments } = useCommentStore()
+  const { selectedComment, setSelectedComment } = useCommentStore()
+  const { selectedPost } = usePostStore()
 
-  const updateComment = async () => {
-    try {
-      const data = await updateCommentToApi(selectedComment)
-      setComments((prev) => ({
-        ...prev,
-        [data.postId]: prev[data.postId].map((comment) => (comment.id === data.id ? data : comment)),
-      }))
-      setShowEditCommentDialog(false)
-    } catch (error) {
-      console.error(error)
-    }
+  const postId = selectedPost?.id || 0
+  const updateMutation = useUpdateCommentMutation(postId)
+
+  const handleUpdate = () => {
+    if (!selectedComment) return
+    updateMutation.mutate(selectedComment, {
+      onSuccess: () => {
+        setShowEditCommentDialog(false)
+      }
+    })
   }
 
   return (
@@ -27,8 +29,14 @@ export const EditCommentDialog = () => {
           <DialogTitle>댓글 수정</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <Textarea placeholder="댓글 내용" value={selectedComment?.body || ""} onChange={(e) => setSelectedComment({ ...selectedComment, body: e.target.value })} />
-          <Button onClick={updateComment}>댓글 업데이트</Button>
+          <Textarea 
+            placeholder="댓글 내용" 
+            value={selectedComment?.body || ""} 
+            onChange={(e) => setSelectedComment({ ...selectedComment, body: e.target.value } as Comment)} 
+          />
+          <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? "수정 중..." : "댓글 수정"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

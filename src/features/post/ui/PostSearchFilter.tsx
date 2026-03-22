@@ -1,16 +1,14 @@
 import { Search } from "lucide-react"
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components"
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../shared/ui'
 import { usePostFilterStore } from "../model/usePostFilterStore"
-import { useTagStore } from "../../../entities/tag/model/useTagStore"
+import { useTagsQuery } from "../../../entities/tag/api/queries"
 import { Tag } from "../../../entities/tag/model/types"
 
-interface Props {
-  onSearch: () => void
-}
-
-export const PostSearchFilter = ({ onSearch }: Props) => {
+export const PostSearchFilter = () => {
   const { searchQuery, setSearchQuery, selectedTag, setSelectedTag, sortBy, setSortBy, sortOrder, setSortOrder } = usePostFilterStore()
-  const { tags } = useTagStore()
+  
+  // Tags 쿼리 구독
+  const { data: tags = [] } = useTagsQuery()
 
   return (
     <div className="flex gap-4">
@@ -22,7 +20,6 @@ export const PostSearchFilter = ({ onSearch }: Props) => {
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && onSearch()}
           />
         </div>
       </div>

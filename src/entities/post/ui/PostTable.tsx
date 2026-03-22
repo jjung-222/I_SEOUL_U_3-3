@@ -3,50 +3,40 @@ import { usePostStore } from "../model/usePostStore"
 import { usePostFilterStore } from "../../../features/post/model/usePostFilterStore"
 import { useDialogStore } from "../../../shared/model/useDialogStore"
 import { HighlightText } from "../../../shared/ui/HighlightText"
-import { deletePostFromApi } from "../api/postApi"
-import { fetchCommentsFromApi } from "../../comment/api/commentApi"
-import { fetchUserByIdFromApi } from "../../user/api/userApi"
-import { useCommentStore } from "../../comment/model/useCommentStore"
+import { usePostsQuery, useDeletePostMutation } from "../api/queries"
 import { useUserStore } from "../../user/model/useUserStore"
 import { Post } from "../model/types"
 import { User } from "../../user/model/types"
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components"
+import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../shared/ui'
 
-export const PostTable = ({ updateURL }: { updateURL: () => void }) => {
-  const { posts, setPosts, setSelectedPost } = usePostStore()
-  const { searchQuery, selectedTag, setSelectedTag } = usePostFilterStore()
+export const PostTable = () => {
+  const { skip, limit, searchQuery, selectedTag, setSelectedTag } = usePostFilterStore()
+  
+  // React Query를 통한 서버 상태 스독
+  const { data, isLoading } = usePostsQuery(limit, skip, selectedTag, searchQuery)
+  const posts = data?.posts || []
+  const deleteMutation = useDeletePostMutation()
+
+  const { setSelectedPost } = usePostStore()
   const { setShowPostDetailDialog, setShowEditDialog, setShowUserModal } = useDialogStore()
-  const { setComments } = useCommentStore()
   const { setSelectedUser } = useUserStore()
 
-  const openPostDetail = async (post: Post) => {
+  const openPostDetail = (post: Post) => {
     setSelectedPost(post)
-    try {
-      const data = await fetchCommentsFromApi(post.id)
-      setComments((prev) => ({ ...prev, [post.id]: data.comments }))
-    } catch (error) {
-      console.error(error)
-    }
     setShowPostDetailDialog(true)
   }
 
-  const deletePost = async (id: number) => {
-    try {
-      await deletePostFromApi(id)
-      setPosts((prev: Post[]) => prev.filter((post: Post) => post.id !== id))
-    } catch (error) {
-      console.error(error)
-    }
+  const deletePost = (id: number) => {
+    deleteMutation.mutate(id)
   }
 
-  const openUserModal = async (user: User) => {
-    try {
-      const userData = await fetchUserByIdFromApi(user.id)
-      setSelectedUser(userData)
-      setShowUserModal(true)
-    } catch (error) {
-      console.error(error)
-    }
+  const openUserModal = (user: User) => {
+    setSelectedUser(user)
+    setShowUserModal(true)
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center p-4">게시물 로딩 중...</div>
   }
 
   return (
@@ -78,7 +68,6 @@ export const PostTable = ({ updateURL }: { updateURL: () => void }) => {
                       }`}
                       onClick={() => {
                         setSelectedTag(tag)
-                        updateURL()
                       }}
                     >
                       {tag}
@@ -88,7 +77,7 @@ export const PostTable = ({ updateURL }: { updateURL: () => void }) => {
               </div>
             </TableCell>
             <TableCell>
-              <div className="flex items-center space-x-2 cursor-pointer" onClick={() => openUserModal(post.author)}>
+              <div className="flex items-center space-x-2 cursor-pointer" onClick={() => post.author && openUserModal(post.author)}>
                 <img src={post.author?.image} alt={post.author?.username} className="w-8 h-8 rounded-full" />
                 <span>{post.author?.username}</span>
               </div>
@@ -106,14 +95,7 @@ export const PostTable = ({ updateURL }: { updateURL: () => void }) => {
                 <Button variant="ghost" size="sm" onClick={() => openPostDetail(post)}>
                   <MessageSquare className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedPost(post)
-                    setShowEditDialog(true)
-                  }}
-                >
+                <Button variant="ghost" size="sm" onClick={() => { setSelectedPost(post); setShowEditDialog(true); }}>
                   <Edit2 className="w-4 h-4" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => deletePost(post.id)}>

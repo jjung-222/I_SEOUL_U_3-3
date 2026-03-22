@@ -1,20 +1,21 @@
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "../../../components"
-import { useDialogStore } from "../../../shared/model/useDialogStore"
 import { usePostStore } from "../../../entities/post/model/usePostStore"
-import { updatePostToApi } from "../../../entities/post/api/postApi"
+import { useDialogStore } from "../../../shared/model/useDialogStore"
+import { useUpdatePostMutation } from "../../../entities/post/api/queries"
+import { Post } from "../../../entities/post/model/types"
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from '../../../shared/ui'
 
 export const EditPostDialog = () => {
   const { showEditDialog, setShowEditDialog } = useDialogStore()
-  const { selectedPost, setSelectedPost, posts, setPosts } = usePostStore()
+  const { selectedPost, setSelectedPost } = usePostStore()
+  const updateMutation = useUpdatePostMutation()
 
-  const updatePost = async () => {
-    try {
-      const data = await updatePostToApi(selectedPost)
-      setPosts(posts.map((post) => (post.id === data.id ? data : post)))
-      setShowEditDialog(false)
-    } catch (error) {
-      console.error(error)
-    }
+  const handleUpdate = () => {
+    if (!selectedPost) return
+    updateMutation.mutate(selectedPost, {
+      onSuccess: () => {
+        setShowEditDialog(false)
+      }
+    })
   }
 
   return (
@@ -24,9 +25,11 @@ export const EditPostDialog = () => {
           <DialogTitle>게시물 수정</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <Input placeholder="제목" value={selectedPost?.title || ""} onChange={(e) => setSelectedPost({ ...selectedPost, title: e.target.value })} />
-          <Textarea rows={15} placeholder="내용" value={selectedPost?.body || ""} onChange={(e) => setSelectedPost({ ...selectedPost, body: e.target.value })} />
-          <Button onClick={updatePost}>게시물 업데이트</Button>
+          <Input placeholder="제목" value={selectedPost?.title || ""} onChange={(e) => setSelectedPost({ ...selectedPost, title: e.target.value } as Post)} />
+          <Textarea rows={15} placeholder="내용" value={selectedPost?.body || ""} onChange={(e) => setSelectedPost({ ...selectedPost, body: e.target.value } as Post)} />
+          <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? "수정 중..." : "게시물 수정"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

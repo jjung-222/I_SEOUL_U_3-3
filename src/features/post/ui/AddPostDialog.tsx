@@ -1,21 +1,20 @@
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from "../../../components"
-import { useDialogStore } from "../../../shared/model/useDialogStore"
 import { usePostStore } from "../../../entities/post/model/usePostStore"
-import { addPostToApi } from "../../../entities/post/api/postApi"
+import { useDialogStore } from "../../../shared/model/useDialogStore"
+import { useAddPostMutation } from "../../../entities/post/api/queries"
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Textarea } from '../../../shared/ui'
 
 export const AddPostDialog = () => {
   const { showAddDialog, setShowAddDialog } = useDialogStore()
-  const { newPost, setNewPost, posts, setPosts } = usePostStore()
+  const { newPost, setNewPost } = usePostStore()
+  const addMutation = useAddPostMutation()
 
-  const addPost = async () => {
-    try {
-      const data = await addPostToApi(newPost)
-      setPosts([data, ...posts])
-      setShowAddDialog(false)
-      setNewPost({ title: "", body: "", userId: 1 })
-    } catch (error) {
-      console.error(error)
-    }
+  const handleAddPost = () => {
+    addMutation.mutate(newPost, {
+      onSuccess: () => {
+        setShowAddDialog(false)
+        setNewPost({ title: "", body: "", userId: 1 })
+      }
+    })
   }
 
   return (
@@ -28,7 +27,9 @@ export const AddPostDialog = () => {
           <Input placeholder="제목" value={newPost.title} onChange={(e) => setNewPost({ ...newPost, title: e.target.value })} />
           <Textarea rows={30} placeholder="내용" value={newPost.body} onChange={(e) => setNewPost({ ...newPost, body: e.target.value })} />
           <Input type="number" placeholder="사용자 ID" value={newPost.userId} onChange={(e) => setNewPost({ ...newPost, userId: Number(e.target.value) })} />
-          <Button onClick={addPost}>게시물 추가</Button>
+          <Button onClick={handleAddPost} disabled={addMutation.isPending}>
+            {addMutation.isPending ? "추가 중..." : "게시물 추가"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

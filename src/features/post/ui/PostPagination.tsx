@@ -1,16 +1,19 @@
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components"
-import { usePostStore } from "../../../entities/post/model/usePostStore"
 import { usePostFilterStore } from "../model/usePostFilterStore"
+import { usePostsQuery } from "../../../entities/post/api/queries"
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../shared/ui'
 
 export const PostPagination = () => {
-  const { total } = usePostStore()
-  const { skip, setSkip, limit, setLimit } = usePostFilterStore()
+  const { skip, limit, setFilters, selectedTag, searchQuery } = usePostFilterStore()
+  
+  // React Query를 통한 total count 획득
+  const { data } = usePostsQuery(limit, skip, selectedTag, searchQuery)
+  const total = data?.total || 0
 
   return (
     <div className="flex justify-between items-center">
       <div className="flex items-center gap-2">
         <span>표시</span>
-        <Select value={limit.toString()} onValueChange={(value) => setLimit(Number(value))}>
+        <Select value={limit.toString()} onValueChange={(value) => setFilters({ limit: Number(value) })}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="10" />
           </SelectTrigger>
@@ -23,10 +26,10 @@ export const PostPagination = () => {
         <span>항목</span>
       </div>
       <div className="flex gap-2">
-        <Button disabled={skip === 0} onClick={() => setSkip(Math.max(0, skip - limit))}>
+        <Button disabled={skip === 0} onClick={() => setFilters({ skip: Math.max(0, skip - limit) })}>
           이전
         </Button>
-        <Button disabled={skip + limit >= total} onClick={() => setSkip(skip + limit)}>
+        <Button disabled={skip + limit >= total} onClick={() => setFilters({ skip: skip + limit })}>
           다음
         </Button>
       </div>
